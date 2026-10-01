@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="ja" class="h-full bg-slate-950 text-slate-100 select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>約数ブレイク - 全約数ハントパズル</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Zen Maru Gothic"', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-glow': 'pulseGlow 2s infinite',
+                        'bounce-short': 'bounceShort 0.25s ease-out',
+                        'pop-in': 'popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    },
+                    keyframes: {
+                        pulseGlow: {
+                            '0%, 100%': { opacity: '1', filter: 'drop-shadow(0 0 12px rgba(59, 130, 246, 0.6))' },
+                            '50%': { opacity: '0.85', filter: 'drop-shadow(0 0 24px rgba(168, 85, 247, 0.8))' },
+                        },
+                        bounceShort: {
+                            '0%': { transform: 'scale(1)' },
+                            '50%': { transform: 'scale(0.92)' },
+                            '100%': { transform: 'scale(1)' },
+                        },
+                        popIn: {
+                            '0%': { opacity: '0', transform: 'scale(0.8)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(100, 116, 139, 1);
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .glow-cyan { box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.35); }
+        .glow-purple { box-shadow: 0 0 20px -3px rgba(168, 85, 247, 0.35); }
+        .glow-amber { box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.35); }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between overflow-hidden select-none bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100">
+
+    <!-- Particle Canvas Layer -->
+    <canvas id="particleCanvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+    <div id="app" class="relative w-full max-w-2xl mx-auto h-full flex flex-col justify-between p-3 sm:p-5 overflow-hidden">
+
+        <!-- ==================== HOME SCREEN ==================== -->
+        <section id="screenHome" class="flex-1 flex flex-col justify-between items-center my-auto py-4 overflow-y-auto w-full">
+            <div class="text-center mt-2">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-3">
+                    <i class="fa-solid fa-crosshairs text-cyan-400"></i> 数字分解ハントパズル
+                </div>
+                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight font-display bg-gradient-to-r from-cyan-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent drop-shadow-md">
+                    約数ブレイク
+                </h1>
+                <p class="text-slate-400 text-xs sm:text-sm mt-2 max-w-xs sm:max-w-md mx-auto">
+                    出題された数字の<span class="text-cyan-300 font-bold">「すべての約数」</span>を候補から見つけ出してコンプリートせよ！
+                </p>
+            </div>
+
+            <div class="w-full space-y-3 my-4">
+
+                <!-- Mode 1: All Divisors Mode -->
+                <button onclick="window.game.startGame('all')" class="w-full glass-panel hover:bg-slate-800/80 border-cyan-500/40 hover:border-cyan-400 p-3.5 sm:p-4 rounded-2xl flex items-center gap-3.5 text-left group transition-all duration-200 glow-cyan">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xl font-bold group-hover:scale-110 transition-transform shrink-0">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-cyan-300 text-base sm:text-lg truncate">全約数コンプリート</span>
+                            <span id="hiScoreAll" class="text-xs bg-cyan-950/80 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full font-display">BEST: 0</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">例: 「12」なら 1, 2, 3, 4, 6, 12 をすべて選んでクリア！</p>
+                    </div>
+                </button>
+
+                <!-- Mode 2: Prime Factorization Mode -->
+                <button onclick="window.game.startGame('prime')" class="w-full glass-panel hover:bg-slate-800/80 border-purple-500/40 hover:border-purple-400 p-3.5 sm:p-4 rounded-2xl flex items-center gap-3.5 text-left group transition-all duration-200 glow-purple">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white text-xl font-bold group-hover:scale-110 transition-transform shrink-0">
+                        <i class="fa-solid fa-scissors"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-purple-300 text-base sm:text-lg truncate">素因数分解アタック</span>
+                            <span id="hiScorePrime" class="text-xs bg-purple-950/80 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full font-display">BEST: 0</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">例: 「12」なら 2 → 2 → 3 と素数で割り続けて「1」を目指せ！</p>
+                    </div>
+                </button>
+
+                <!-- Mode 3: Sandbox -->
+                <button onclick="window.game.openSandbox()" class="w-full glass-panel hover:bg-slate-800/80 border-slate-600/40 hover:border-slate-400 p-3.5 rounded-2xl flex items-center gap-3.5 text-left group transition-all duration-200">
+                    <div class="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center text-slate-200 text-xl font-bold group-hover:scale-110 transition-transform shrink-0">
+                        <i class="fa-solid fa-vial"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-300 text-base sm:text-lg">自由研究サンドボックス</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">制限時間なし。好きな数字を入力して全約数の一覧を学習！</p>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Sound Toggle & Info -->
+            <div class="flex items-center justify-between w-full pt-2 border-t border-slate-800">
+                <span class="text-xs text-slate-500"><i class="fa-solid fa-circle-info mr-1"></i> ダミーに惑わされず素早くタップ！</span>
+                <button onclick="window.soundManager.toggleMute()" id="soundToggleBtn" class="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700">
+                    <i id="soundIcon" class="fa-solid fa-volume-high"></i>
+                    <span id="soundText">Sound ON</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ==================== GAMEPLAY SCREEN ==================== -->
+        <section id="screenGame" class="hidden flex-1 flex flex-col justify-between h-full py-1 overflow-hidden">
+            
+            <!-- HUD -->
+            <div class="w-full glass-panel rounded-2xl p-2 sm:p-2.5 mb-1 flex items-center justify-between gap-2 shadow-lg shrink-0">
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-wider">STAGE</span>
+                    <span id="stageText" class="text-lg sm:text-xl font-extrabold font-display text-cyan-400">1</span>
+                </div>
+
+                <div class="flex flex-col items-center flex-1 max-w-[130px] sm:max-w-[150px]">
+                    <div class="flex items-center justify-between w-full text-[10px] sm:text-[11px] font-bold text-slate-300 mb-0.5">
+                        <span><i class="fa-solid fa-clock text-indigo-400 mr-1"></i>TIME</span>
+                        <span id="timerText" class="font-display text-xs sm:text-sm text-indigo-300">60s</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1.5 sm:h-2 rounded-full overflow-hidden border border-slate-700">
+                        <div id="timerBar" class="bg-gradient-to-r from-cyan-400 to-indigo-500 h-full w-full transition-all duration-200"></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center px-1">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-wider">COMBO</span>
+                    <span id="comboText" class="text-lg sm:text-xl font-black font-display text-amber-400">0x</span>
+                </div>
+
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-wider">SCORE</span>
+                    <span id="scoreText" class="text-lg sm:text-xl font-extrabold font-display text-emerald-400">0</span>
+                </div>
+            </div>
+
+            <!-- Target Hero Card & Progress -->
+            <div id="targetCard" class="glass-panel rounded-2xl p-2.5 sm:p-3 my-0.5 flex flex-col items-center justify-center relative overflow-hidden border border-indigo-500/30 transition-all duration-300 shrink-0">
+                
+                <!-- Stage Clear Celebration Overlay -->
+                <div id="clearOverlay" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md z-30 flex flex-col items-center justify-center animate-pop-in border-2 border-amber-400/80 rounded-2xl shadow-[0_0_30px_rgba(245,158,11,0.5)]">
+                    <div class="text-amber-300 font-black text-2xl sm:text-3xl font-display tracking-wider flex items-center gap-2 drop-shadow-[0_0_20px_rgba(245,158,11,0.9)] animate-bounce">
+                        <i class="fa-solid fa-crown text-amber-400"></i> COMPLETE!
+                    </div>
+                    <div class="text-cyan-300 font-bold text-xs sm:text-sm mt-1 font-display">
+                        全約数コンプリート達成！
+                    </div>
+                    <div class="flex items-center gap-2 mt-2 text-xs font-bold">
+                        <span id="bonusScoreBadge" class="text-emerald-300 bg-emerald-950/90 px-3 py-1 rounded-full border border-emerald-500/50 shadow-lg">+150 PTS</span>
+                        <span class="text-cyan-300 bg-cyan-950/90 px-3 py-1 rounded-full border border-cyan-500/50 shadow-lg"><i class="fa-solid fa-clock-rotate-left mr-1"></i>+4 SEC</span>
+                    </div>
+                </div>
+
+                <div class="absolute top-1.5 left-2.5 text-[10px] sm:text-[11px] text-indigo-300/90 font-medium flex items-center gap-1.5">
+                    <i class="fa-solid fa-bullseye text-cyan-400"></i>
+                    <span id="divisorRuleTip">すべての約数を探せ！</span>
+                </div>
+                
+                <div class="my-0.5 text-center">
+                    <div class="text-[10px] text-slate-400 uppercase font-semibold">TARGET</div>
+                    <div id="targetDisplay" class="text-4xl sm:text-5xl font-black font-display bg-gradient-to-r from-white via-cyan-100 to-indigo-200 bg-clip-text text-transparent tracking-tight leading-none">
+                        12
+                    </div>
+                </div>
+
+                <!-- Found Divisors Badges -->
+                <div class="w-full flex flex-col items-center gap-1 mt-1">
+                    <div class="flex items-center justify-between w-full px-1 text-[11px] font-bold text-slate-300">
+                        <span id="foundLabelText">見つけた約数:</span>
+                        <span id="foundRatioText" class="text-cyan-300 font-display text-xs sm:text-sm">0 / 6 個</span>
+                    </div>
+                    <div id="foundBadgesContainer" class="flex items-center justify-center gap-1 flex-wrap min-h-[28px] sm:min-h-[32px] text-xs font-display text-slate-300 bg-slate-900/70 p-1.5 rounded-xl border border-slate-800 w-full">
+                        <!-- Dynamic Found Divisor Chips -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Candidate Grid Area -->
+            <div class="flex-1 my-1 flex flex-col justify-center min-h-0 overflow-hidden">
+                <div id="divisorGrid" class="w-full grid grid-cols-3 sm:grid-cols-4 gap-2 items-center justify-center p-0.5">
+                    <!-- Dynamic Candidate Buttons -->
+                </div>
+            </div>
+
+            <!-- Powerups Toolbar -->
+            <div class="glass-panel rounded-2xl p-2 flex items-center justify-around gap-2 my-1 shrink-0">
+                <button onclick="window.game.useHint()" id="btnHint" class="flex-1 flex items-center justify-center gap-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-amber-300 transition-all disabled:opacity-40 disabled:pointer-events-none">
+                    <i class="fa-solid fa-lightbulb text-amber-400"></i> ヒント
+                    <span id="countHint" class="bg-amber-950 text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full font-display border border-amber-500/30">2</span>
+                </button>
+                <button onclick="window.game.useBomb()" id="btnBomb" class="flex-1 flex items-center justify-center gap-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-pink-300 transition-all disabled:opacity-40 disabled:pointer-events-none">
+                    <i class="fa-solid fa-wand-magic-sparkles text-pink-400"></i> 一括ハント
+                    <span id="countBomb" class="bg-pink-950 text-pink-300 text-[10px] px-1.5 py-0.2 rounded-full font-display border border-pink-500/30">1</span>
+                </button>
+                <button onclick="window.game.useTimePlus()" id="btnFreeze" class="flex-1 flex items-center justify-center gap-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-cyan-300 transition-all disabled:opacity-40 disabled:pointer-events-none">
+                    <i class="fa-solid fa-hourglass-plus text-cyan-400"></i> +5秒延長
+                    <span id="countFreeze" class="bg-cyan-950 text-cyan-300 text-[10px] px-1.5 py-0.2 rounded-full font-display border border-cyan-500/30">1</span>
+                </button>
+            </div>
+
+            <!-- Navigation Footbar -->
+            <div class="flex justify-between items-center mt-0.5 px-1 shrink-0">
+                <button onclick="window.game.returnHome()" class="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1">
+                    <i class="fa-solid fa-arrow-left"></i> ホームに戻る
+                </button>
+                <span class="text-[10px] sm:text-[11px] text-slate-500 font-display">FACTOR BREAK v3.1</span>
+            </div>
+        </section>
+
+        <!-- ==================== GAME OVER MODAL ==================== -->
+        <div id="modalGameOver" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div class="glass-panel w-full max-w-sm rounded-3xl p-6 flex flex-col items-center text-center shadow-2xl border border-indigo-500/40 animate-pop-in">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-3xl text-white mb-3 shadow-lg glow-purple">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <h2 class="text-2xl font-black font-display text-white mb-1">TIME UP!</h2>
+                <p class="text-xs text-slate-400 mb-4">結果発表</p>
+
+                <div class="w-full bg-slate-900/80 rounded-2xl p-4 border border-slate-800 space-y-3 mb-5">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400">最終スコア</span>
+                        <span id="finalScore" class="text-2xl font-extrabold font-display text-emerald-400">0</span>
+                    </div>
+                    <div class="h-px bg-slate-800"></div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400">クリアした数字</span>
+                        <span id="finalCleared" class="font-bold text-slate-200 font-display text-sm">0 問</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400">最大連続コンボ</span>
+                        <span id="finalMaxCombo" class="font-bold text-amber-400 font-display text-sm">0x</span>
+                    </div>
+                </div>
+
+                <button onclick="window.game.copyClassroomResult()" id="btnCopyResult" class="w-full mb-3 py-2.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500/50 text-indigo-200 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md">
+                    <i class="fa-solid fa-copy text-indigo-400"></i>
+                    <span id="copyResultBtnText">クラスルーム提出用にスコアをコピー</span>
+                </button>
+
+                <div class="flex gap-2 w-full">
+                    <button onclick="window.game.restartGame()" class="flex-1 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold rounded-xl text-sm shadow-lg transition-all active:scale-95">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> もう一度遊ぶ
+                    </button>
+                    <button onclick="window.game.returnHome()" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-sm transition-all border border-slate-700">
+                        ホーム
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SANDBOX SCREEN ==================== -->
+        <section id="screenSandbox" class="hidden flex-1 flex flex-col justify-between py-2 overflow-y-auto">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                <h2 class="font-bold text-slate-200 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-vial text-purple-400"></i> 自由研究サンドボックス
+                </h2>
+                <button onclick="window.game.returnHome()" class="text-xs text-slate-400 hover:text-white px-3 py-1 rounded-lg bg-slate-800">
+                    <i class="fa-solid fa-xmark"></i> 閉じる
+                </button>
+            </div>
+
+            <div class="my-4 glass-panel rounded-2xl p-4 flex flex-col gap-3">
+                <label class="text-xs text-slate-400">調査したい数字を入力（2〜999）：</label>
+                <div class="flex gap-2">
+                    <input type="number" id="sandboxInput" value="12" min="2" max="999" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 font-display text-xl font-bold text-indigo-300 focus:outline-none focus:border-indigo-500">
+                    <button onclick="window.sandbox.setCustomTarget()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm">
+                        確認
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-4 flex-1 flex flex-col items-center justify-center min-h-[220px]">
+                <div class="text-xs text-indigo-300/80 mb-1 font-medium">ターゲット数：</div>
+                <div id="sandboxValue" class="text-5xl font-black font-display text-white mb-3">12</div>
+                
+                <div class="text-xs text-slate-400 mb-2">すべての約数（クリックで発見）：</div>
+                <div id="sandboxDivisors" class="flex flex-wrap gap-2 justify-center max-h-[160px] overflow-y-auto w-full p-2">
+                    <!-- Dynamic Sandbox Buttons -->
+                </div>
+            </div>
+
+            <div id="sandboxSummary" class="glass-panel rounded-2xl p-3 my-2 text-xs text-slate-300 font-display flex flex-col gap-1">
+                <span class="text-slate-400">約数の個数: <span id="sandboxCount" class="font-bold text-cyan-300">6 個</span></span>
+                <span class="text-slate-400">素因数分解: <span id="sandboxPrimeFactors" class="font-bold text-purple-300">2 × 2 × 3</span></span>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        class MathUtils {
+            static isPrime(n) {
+                if (n <= 1) return false;
+                if (n <= 3) return true;
+                if (n % 2 === 0 || n % 3 === 0) return false;
+                for (let i = 5; i * i <= n; i += 6) {
+                    if (n % i === 0 || n % (i + 2) === 0) return false;
+                }
+                return true;
+            }
+
+            static getDivisors(n) {
+                const divs = [];
+                for (let i = 1; i * i <= n; i++) {
+                    if (n % i === 0) {
+                        divs.push(i);
+                        if (i * i !== n) divs.push(n / i);
+                    }
+                }
+                return divs.sort((a, b) => a - b);
+            }
+
+            static getPrimeDivisors(n) {
+                const primes = [];
+                for (let i = 2; i <= n; i++) {
+                    if (n % i === 0 && this.isPrime(i)) {
+                        primes.push(i);
+                    }
+                }
+                return primes;
+            }
+
+            static getPrimeFactorization(n) {
+                const factors = [];
+                let d = 2;
+                let temp = n;
+                while (temp >= 2) {
+                    if (temp % d === 0) {
+                        factors.push(d);
+                        temp /= d;
+                    } else {
+                        d++;
+                    }
+                }
+                return factors;
+            }
+
+            static generateTargetNumber(stage) {
+                const easyPool = [12, 16, 18, 20, 24, 28, 30, 32, 36, 40];
+                const medPool = [42, 45, 48, 50, 54, 56, 60, 64, 72, 80, 84, 90, 96];
+                const hardPool = [100, 108, 120, 132, 144, 150, 160, 180, 200, 210, 240, 300, 360];
+
+                let pool = easyPool;
+                if (stage >= 3 && stage <= 6) pool = [...easyPool, ...medPool];
+                else if (stage > 6) pool = [...medPool, ...hardPool];
+
+                return pool[Math.floor(Math.random() * pool.length)];
+            }
+
+            static getDummyDivisors(target, count, excludeList) {
+                const dummies = new Set();
+                const maxVal = Math.max(20, target + 15);
+                let attempts = 0;
+
+                while (dummies.size < count && attempts < 200) {
+                    attempts++;
+                    let rand = Math.floor(Math.random() * maxVal) + 2;
+                    if (rand !== target && !excludeList.includes(rand) && target % rand !== 0) {
+                        dummies.add(rand);
+                    }
+                }
+                return Array.from(dummies);
+            }
+        }
+
+        class SoundManager {
+            constructor() {
+                this.ctx = null;
+                this.isMuted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.isMuted = !this.isMuted;
+                const soundText = document.getElementById('soundText');
+                const soundIcon = document.getElementById('soundIcon');
+                if (soundText) soundText.textContent = this.isMuted ? 'Sound OFF' : 'Sound ON';
+                if (soundIcon) soundIcon.className = this.isMuted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
+            }
+
+            playTone(freq, type, duration, gainVal = 0.1) {
+                if (this.isMuted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {
+                    console.warn(e);
+                }
+            }
+
+            playCorrect() {
+                this.playTone(587.33, 'sine', 0.12, 0.15);
+                setTimeout(() => this.playTone(880, 'sine', 0.2, 0.15), 80);
+            }
+
+            playError() {
+                this.playTone(180, 'sawtooth', 0.2, 0.15);
+                setTimeout(() => this.playTone(140, 'sawtooth', 0.25, 0.15), 100);
+            }
+
+            playStageClear() {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playTone(freq, 'triangle', 0.25, 0.2), idx * 90);
+                });
+            }
+
+            playPowerup() {
+                this.playTone(400, 'sine', 0.08, 0.15);
+                setTimeout(() => this.playTone(800, 'sine', 0.15, 0.2), 60);
+            }
+        }
+
+        class ParticleEngine {
+            constructor() {
+                this.canvas = document.getElementById('particleCanvas');
+                this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
+                this.particles = [];
+                
+                if (this.canvas) {
+                    this.resize();
+                    window.addEventListener('resize', () => this.resize());
+                    this.animate();
+                }
+            }
+
+            resize() {
+                if (!this.canvas) return;
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            spawn(x, y, color = '#38bdf8', count = 15) {
+                if (!this.canvas || !this.ctx) return;
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 5 + 2;
+                    this.particles.push({
+                        x, y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed - 1,
+                        size: Math.random() * 5 + 3,
+                        color,
+                        alpha: 1,
+                        decay: Math.random() * 0.03 + 0.015
+                    });
+                }
+            }
+
+            spawnCelebration(centerX, centerY) {
+                const colors = ['#f59e0b', '#38bdf8', '#a855f7', '#10b981', '#f43f5e'];
+                for (let i = 0; i < 60; i++) {
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    this.spawn(centerX, centerY, color, 1);
+                }
+            }
+
+            animate() {
+                if (!this.ctx || !this.canvas) return;
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.15;
+                    p.alpha -= p.decay;
+
+                    if (p.alpha <= 0) {
+                        this.particles.splice(i, 1);
+                        continue;
+                    }
+
+                    this.ctx.save();
+                    this.ctx.globalAlpha = p.alpha;
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.restore();
+                }
+
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        class FactorBreakGame {
+            constructor() {
+                this.mode = 'all';
+                this.stage = 1;
+                this.score = 0;
+                this.combo = 0;
+                this.maxCombo = 0;
+                this.targetNumber = 12;
+                this.currentValue = 12;
+                this.requiredDivisors = [];
+                this.foundDivisors = [];
+                this.candidates = [];
+                
+                this.timer = 60;
+                this.timerInterval = null;
+                this.isGameOver = false;
+                this.isProcessing = false;
+
+                this.powerups = { hints: 2, bombs: 1, freezes: 1 };
+
+                this.hiScores = {
+                    all: parseInt(localStorage.getItem('fb_hi_all') || '0'),
+                    prime: parseInt(localStorage.getItem('fb_hi_prime') || '0')
+                };
+
+                this.updateHiScoreDisplays();
+            }
+
+            updateHiScoreDisplays() {
+                const elA = document.getElementById('hiScoreAll');
+                const elP = document.getElementById('hiScorePrime');
+                if (elA) elA.textContent = `BEST: ${this.hiScores.all}`;
+                if (elP) elP.textContent = `BEST: ${this.hiScores.prime}`;
+            }
+
+            startGame(mode) {
+                if (window.soundManager) window.soundManager.init();
+                this.mode = mode;
+                this.stage = 1;
+                this.score = 0;
+                this.combo = 0;
+                this.maxCombo = 0;
+                this.timer = 60;
+                this.isGameOver = false;
+                this.isProcessing = false;
+
+                this.powerups = { hints: 2, bombs: 1, freezes: 1 };
+                this.updatePowerupUI();
+
+                document.getElementById('screenHome').classList.add('hidden');
+                document.getElementById('screenSandbox').classList.add('hidden');
+                document.getElementById('screenGame').classList.remove('hidden');
+                document.getElementById('modalGameOver').classList.add('hidden');
+
+                const tip = document.getElementById('divisorRuleTip');
+                if (tip) {
+                    if (mode === 'all') tip.textContent = 'すべての約数を見つけ出せ！';
+                    else if (mode === 'prime') tip.textContent = '素数（2,3,5...）で割り続けて「1」にせよ！';
+                }
+
+                this.initStage();
+                this.startTimer();
+            }
+
+            initStage() {
+                this.targetNumber = MathUtils.generateTargetNumber(this.stage);
+                this.currentValue = this.targetNumber;
+                this.foundDivisors = [];
+
+                if (this.mode === 'all') {
+                    this.requiredDivisors = MathUtils.getDivisors(this.targetNumber);
+                    
+                    const allValidDivisors = MathUtils.getDivisors(this.targetNumber);
+                    const reqCount = this.requiredDivisors.length;
+                    const dummyCount = Math.max(6, 12 - reqCount);
+                    const dummies = MathUtils.getDummyDivisors(this.targetNumber, dummyCount, allValidDivisors);
+
+                    const list = [];
+                    this.requiredDivisors.forEach(d => {
+                        list.push({ value: d, isCorrect: true, found: false });
+                    });
+                    dummies.forEach(d => {
+                        list.push({ value: d, isCorrect: false, found: false });
+                    });
+
+                    list.sort(() => Math.random() - 0.5);
+                    this.candidates = list;
+
+                } else if (this.mode === 'prime') {
+                    this.setupPrimeCandidates();
+                }
+
+                this.updateHUD();
+                this.render();
+            }
+
+            setupPrimeCandidates() {
+                const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31];
+                const activePrimeFactors = MathUtils.getPrimeDivisors(this.currentValue);
+                
+                const availableDummies = primes.filter(p => !activePrimeFactors.includes(p));
+                availableDummies.sort(() => Math.random() - 0.5);
+
+                const dummyPrimes = availableDummies.slice(0, Math.max(4, 10 - activePrimeFactors.length));
+                const pool = [...activePrimeFactors, ...dummyPrimes].sort((a,b) => a - b);
+
+                this.candidates = pool.map(p => ({
+                    value: p,
+                    isCorrect: activePrimeFactors.includes(p),
+                    found: false
+                }));
+            }
+
+            startTimer() {
+                clearInterval(this.timerInterval);
+                this.timerInterval = setInterval(() => {
+                    this.timer--;
+                    if (this.timer <= 0) {
+                        this.timer = 0;
+                        this.endGame();
+                    }
+                    this.updateTimerUI();
+                }, 1000);
+            }
+
+            updateTimerUI() {
+                const text = document.getElementById('timerText');
+                const bar = document.getElementById('timerBar');
+                if (text) text.textContent = `${this.timer}s`;
+                if (bar) {
+                    const pct = Math.max(0, Math.min(100, (this.timer / 60) * 100));
+                    bar.style.width = `${pct}%`;
+                    if (this.timer <= 10) {
+                        bar.className = 'bg-gradient-to-r from-rose-500 to-red-600 h-full w-full transition-all duration-200';
+                    } else {
+                        bar.className = 'bg-gradient-to-r from-cyan-400 to-indigo-500 h-full w-full transition-all duration-200';
+                    }
+                }
+            }
+
+            updateHUD() {
+                const sText = document.getElementById('stageText');
+                const scText = document.getElementById('scoreText');
+                const cText = document.getElementById('comboText');
+
+                if (sText) sText.textContent = this.stage;
+                if (scText) scText.textContent = this.score;
+                if (cText) cText.textContent = `${this.combo}x`;
+            }
+
+            updatePowerupUI() {
+                const hEl = document.getElementById('countHint');
+                const bEl = document.getElementById('countBomb');
+                const fEl = document.getElementById('countFreeze');
+
+                if (hEl) hEl.textContent = this.powerups.hints;
+                if (bEl) bEl.textContent = this.powerups.bombs;
+                if (fEl) fEl.textContent = this.powerups.freezes;
+
+                document.getElementById('btnHint').disabled = this.powerups.hints <= 0;
+                document.getElementById('btnBomb').disabled = this.powerups.bombs <= 0;
+                document.getElementById('btnFreeze').disabled = this.powerups.freezes <= 0;
+            }
+
+            render() {
+                const display = document.getElementById('targetDisplay');
+                if (display) {
+                    display.textContent = this.mode === 'prime' ? this.currentValue : this.targetNumber;
+                    display.classList.remove('animate-bounce-short');
+                    void display.offsetWidth;
+                    display.classList.add('animate-bounce-short');
+                }
+
+                const labelEl = document.getElementById('foundLabelText');
+                const ratioEl = document.getElementById('foundRatioText');
+
+                if (this.mode === 'all') {
+                    if (labelEl) labelEl.textContent = '見つけた約数:';
+                    if (ratioEl) ratioEl.textContent = `${this.foundDivisors.length} / ${this.requiredDivisors.length} 個`;
+                } else {
+                    if (labelEl) labelEl.textContent = '分解の履歴:';
+                    if (ratioEl) ratioEl.textContent = `目標: 1`;
+                }
+
+                const badgesBox = document.getElementById('foundBadgesContainer');
+                if (badgesBox) {
+                    if (this.mode === 'all') {
+                        if (this.foundDivisors.length === 0) {
+                            badgesBox.innerHTML = `<span class="text-slate-500 text-[11px]">候補の中から正しい約数をタップしてください</span>`;
+                        } else {
+                            const sortedFound = [...this.foundDivisors].sort((a,b) => a - b);
+                            badgesBox.innerHTML = sortedFound.map(val => `
+                                <span class="px-2.5 py-1 rounded-lg bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 font-bold font-display text-xs shadow-sm flex items-center gap-1">
+                                    <i class="fa-solid fa-check text-[10px] text-emerald-400"></i> ${val}
+                                </span>
+                            `).join('');
+                        }
+                    } else {
+                        if (this.foundDivisors.length === 0) {
+                            badgesBox.innerHTML = `<span class="text-slate-500 text-[11px]">割り切れる素数を選んで「1」にしてください</span>`;
+                        } else {
+                            let historyHTML = `<span class="text-slate-400 font-bold">${this.targetNumber}</span>`;
+                            this.foundDivisors.forEach(p => {
+                                historyHTML += ` <span class="text-purple-400">÷ ${p}</span>`;
+                            });
+                            historyHTML += ` <span class="text-emerald-400 font-bold">= ${this.currentValue}</span>`;
+                            badgesBox.innerHTML = `<div class="text-xs sm:text-sm font-display tracking-wider text-purple-200">${historyHTML}</div>`;
+                        }
+                    }
+                }
+
+                this.renderGrid();
+            }
+
+            renderGrid() {
+                const grid = document.getElementById('divisorGrid');
+                if (!grid) return;
+                grid.innerHTML = '';
+
+                this.candidates.forEach((item, index) => {
+                    const btn = document.createElement('button');
+                    const isFound = this.mode === 'all' && item.found;
+                    
+                    // 完全固定の高さと相対位置（正解時も高さや数字位置が不変）
+                    const baseClass = "glass-panel relative flex items-center justify-center font-display font-black text-xl sm:text-2xl rounded-xl shadow-md transition-all h-11 sm:h-14 w-full";
+
+                    if (isFound) {
+                        btn.className = `${baseClass} opacity-50 bg-emerald-950/60 border-emerald-500/50 text-emerald-300 cursor-default pointer-events-none`;
+                        btn.innerHTML = `
+                            <span>${item.value}</span>
+                            <i class="fa-solid fa-circle-check text-xs sm:text-sm text-emerald-400 absolute top-1.5 right-1.5"></i>
+                        `;
+                    } else {
+                        btn.className = `${baseClass} hover:scale-[1.02] active:scale-95 border-slate-700/60 hover:border-cyan-400/80 hover:bg-slate-800/90 text-slate-100`;
+                        btn.innerHTML = `<span>${item.value}</span>`;
+                        btn.onclick = (e) => this.handleCandidateClick(index, e.currentTarget);
+                    }
+
+                    grid.appendChild(btn);
+                });
+            }
+
+            handleCandidateClick(index, element) {
+                if (this.isGameOver || this.isProcessing) return;
+
+                const item = this.candidates[index];
+                if (!item) return;
+
+                if (this.mode === 'all') {
+                    if (item.found) return;
+
+                    if (!item.isCorrect) {
+                        if (window.soundManager) window.soundManager.playError();
+                        this.combo = 0;
+                        this.timer = Math.max(0, this.timer - 3);
+                        this.updateHUD();
+                        this.updateTimerUI();
+
+                        if (element) {
+                            element.classList.add('bg-rose-900/80', 'border-rose-500', 'text-rose-200');
+                            setTimeout(() => {
+                                if (element) element.classList.remove('bg-rose-900/80', 'border-rose-500', 'text-rose-200');
+                            }, 400);
+                        }
+                        return;
+                    }
+
+                    this.isProcessing = true;
+                    item.found = true;
+                    this.foundDivisors.push(item.value);
+
+                    this.combo++;
+                    if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+
+                    this.score += (item.value * 10) + (this.combo * 15);
+
+                    if (element && window.particles) {
+                        const rect = element.getBoundingClientRect();
+                        window.particles.spawn(rect.left + rect.width / 2, rect.top + rect.height / 2, '#38bdf8', 18);
+                    }
+
+                    if (window.soundManager) window.soundManager.playCorrect();
+                    this.updateHUD();
+                    this.render();
+
+                    if (this.foundDivisors.length >= this.requiredDivisors.length) {
+                        this.triggerStageClear();
+                    } else {
+                        this.isProcessing = false;
+                    }
+
+                } else if (this.mode === 'prime') {
+                    const primeVal = item.value;
+
+                    if (this.currentValue % primeVal !== 0) {
+                        if (window.soundManager) window.soundManager.playError();
+                        this.combo = 0;
+                        this.timer = Math.max(0, this.timer - 3);
+                        this.updateHUD();
+                        this.updateTimerUI();
+
+                        if (element) {
+                            element.classList.add('bg-rose-900/80', 'border-rose-500', 'text-rose-200');
+                            setTimeout(() => {
+                                if (element) element.classList.remove('bg-rose-900/80', 'border-rose-500', 'text-rose-200');
+                            }, 400);
+                        }
+                        return;
+                    }
+
+                    this.isProcessing = true;
+                    this.currentValue /= primeVal;
+                    this.foundDivisors.push(primeVal);
+
+                    this.combo++;
+                    if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+
+                    this.score += (primeVal * 20) + (this.combo * 15);
+
+                    if (element && window.particles) {
+                        const rect = element.getBoundingClientRect();
+                        window.particles.spawn(rect.left + rect.width / 2, rect.top + rect.height / 2, '#a855f7', 18);
+                    }
+
+                    if (window.soundManager) window.soundManager.playCorrect();
+
+                    if (this.currentValue === 1) {
+                        this.updateHUD();
+                        this.render();
+                        this.triggerStageClear();
+                    } else {
+                        this.setupPrimeCandidates();
+                        this.updateHUD();
+                        this.render();
+                        this.isProcessing = false;
+                    }
+                }
+            }
+
+            triggerStageClear() {
+                this.isProcessing = true;
+                if (window.soundManager) window.soundManager.playStageClear();
+
+                const stageBonus = 150 * this.stage;
+                this.score += stageBonus;
+                this.timer = Math.min(60, this.timer + 4);
+                this.updateHUD();
+                this.updateTimerUI();
+
+                const targetCard = document.getElementById('targetCard');
+                const clearOverlay = document.getElementById('clearOverlay');
+                const bonusBadge = document.getElementById('bonusScoreBadge');
+
+                if (bonusBadge) bonusBadge.textContent = `+${stageBonus} PTS`;
+
+                if (targetCard && window.particles) {
+                    const rect = targetCard.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    window.particles.spawnCelebration(centerX, centerY);
+                }
+
+                if (clearOverlay) {
+                    clearOverlay.classList.remove('hidden');
+                }
+
+                setTimeout(() => {
+                    if (clearOverlay) clearOverlay.classList.add('hidden');
+                    this.stage++;
+                    this.initStage();
+                    this.isProcessing = false;
+                }, 1100);
+            }
+
+            useHint() {
+                if (this.powerups.hints <= 0 || this.isGameOver) return;
+                
+                let targetVal = null;
+                if (this.mode === 'all') {
+                    const unfound = this.candidates.filter(c => c.isCorrect && !c.found);
+                    if (unfound.length === 0) return;
+                    targetVal = unfound[0].value;
+                } else {
+                    const primeDivs = MathUtils.getPrimeDivisors(this.currentValue);
+                    if (primeDivs.length === 0) return;
+                    targetVal = primeDivs[0];
+                }
+
+                this.powerups.hints--;
+                this.updatePowerupUI();
+                if (window.soundManager) window.soundManager.playPowerup();
+
+                const grid = document.getElementById('divisorGrid');
+                if (!grid) return;
+
+                const buttons = grid.querySelectorAll('button');
+                buttons.forEach(btn => {
+                    if (parseInt(btn.textContent) === targetVal) {
+                        btn.classList.add('ring-4', 'ring-amber-400', 'animate-pulse');
+                        setTimeout(() => btn.classList.remove('ring-4', 'ring-amber-400', 'animate-pulse'), 1800);
+                    }
+                });
+            }
+
+            useBomb() {
+                if (this.powerups.bombs <= 0 || this.isGameOver) return;
+
+                if (this.mode === 'all') {
+                    const unfoundIndices = [];
+                    this.candidates.forEach((c, idx) => {
+                        if (c.isCorrect && !c.found) unfoundIndices.push(idx);
+                    });
+                    if (unfoundIndices.length === 0) return;
+
+                    this.powerups.bombs--;
+                    this.updatePowerupUI();
+                    if (window.soundManager) window.soundManager.playPowerup();
+
+                    unfoundIndices.forEach(idx => {
+                        const item = this.candidates[idx];
+                        item.found = true;
+                        if (!this.foundDivisors.includes(item.value)) {
+                            this.foundDivisors.push(item.value);
+                        }
+                    });
+
+                    this.render();
+                    this.triggerStageClear();
+
+                } else {
+                    this.powerups.bombs--;
+                    this.updatePowerupUI();
+                    if (window.soundManager) window.soundManager.playPowerup();
+
+                    const primeFactors = MathUtils.getPrimeFactorization(this.currentValue);
+                    primeFactors.forEach(p => this.foundDivisors.push(p));
+                    this.currentValue = 1;
+
+                    this.render();
+                    this.triggerStageClear();
+                }
+            }
+
+            useTimePlus() {
+                if (this.powerups.freezes <= 0 || this.isGameOver) return;
+                this.powerups.freezes--;
+                this.updatePowerupUI();
+                if (window.soundManager) window.soundManager.playPowerup();
+
+                this.timer = Math.min(60, this.timer + 5);
+                this.updateTimerUI();
+            }
+
+            endGame() {
+                this.isGameOver = true;
+                clearInterval(this.timerInterval);
+
+                if (this.score > this.hiScores[this.mode]) {
+                    this.hiScores[this.mode] = this.score;
+                    localStorage.setItem(`fb_hi_${this.mode}`, this.score.toString());
+                    this.updateHiScoreDisplays();
+                }
+
+                document.getElementById('finalScore').textContent = this.score;
+                document.getElementById('finalCleared').textContent = `${this.stage - 1} 問`;
+                document.getElementById('finalMaxCombo').textContent = `${this.maxCombo}x`;
+
+                document.getElementById('modalGameOver').classList.remove('hidden');
+            }
+
+            copyClassroomResult() {
+                const modeName = this.mode === 'all' ? '全約数コンプリート' : '素因数分解アタック';
+                const textToCopy = `【約数ブレイク 学習結果】\nモード: ${modeName}\n最終スコア: ${this.score}点\nクリア問題数: ${this.stage - 1}問\n最大コンボ: ${this.maxCombo}x`;
+
+                const textArea = document.createElement('textarea');
+                textArea.value = textToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    const btnText = document.getElementById('copyResultBtnText');
+                    if (btnText) {
+                        btnText.textContent = 'コピー完了！Classroomのコメント欄に貼り付けできます';
+                        setTimeout(() => {
+                            btnText.textContent = 'クラスルーム提出用にスコアをコピー';
+                        }, 2500);
+                    }
+                } catch (err) {
+                    console.error('コピーに失敗しました', err);
+                }
+                document.body.removeChild(textArea);
+            }
+
+            restartGame() {
+                this.startGame(this.mode);
+            }
+
+            returnHome() {
+                clearInterval(this.timerInterval);
+                document.getElementById('screenGame').classList.add('hidden');
+                document.getElementById('screenSandbox').classList.add('hidden');
+                document.getElementById('modalGameOver').classList.add('hidden');
+                document.getElementById('screenHome').classList.remove('hidden');
+            }
+
+            openSandbox() {
+                if (window.soundManager) window.soundManager.init();
+                document.getElementById('screenHome').classList.add('hidden');
+                document.getElementById('screenGame').classList.add('hidden');
+                document.getElementById('screenSandbox').classList.remove('hidden');
+                if (window.sandbox) window.sandbox.init();
+            }
+        }
+
+        class SandboxManager {
+            constructor() {
+                this.target = 12;
+            }
+
+            init() {
+                this.target = 12;
+                const input = document.getElementById('sandboxInput');
+                if (input) input.value = 12;
+                this.render();
+            }
+
+            setCustomTarget() {
+                const input = document.getElementById('sandboxInput');
+                if (!input) return;
+                let val = parseInt(input.value) || 12;
+                val = Math.max(2, Math.min(999, val));
+                this.target = val;
+                this.render();
+            }
+
+            render() {
+                const valEl = document.getElementById('sandboxValue');
+                if (valEl) valEl.textContent = this.target;
+
+                const divBox = document.getElementById('sandboxDivisors');
+                if (!divBox) return;
+                divBox.innerHTML = '';
+
+                const divisors = MathUtils.getDivisors(this.target);
+                const primeFactors = MathUtils.getPrimeFactorization(this.target);
+
+                divisors.forEach(d => {
+                    const badge = document.createElement('div');
+                    const isP = MathUtils.isPrime(d);
+                    badge.className = `px-3.5 py-2 ${isP ? 'bg-purple-900/60 border-purple-500/60 text-purple-200' : 'bg-slate-800 border-slate-700 text-cyan-300'} border rounded-xl font-display font-bold text-base shadow-sm`;
+                    badge.innerHTML = `${d} ${isP ? '<span class="text-[10px] text-purple-400 font-normal ml-1">素数</span>' : ''}`;
+                    divBox.appendChild(badge);
+                });
+
+                document.getElementById('sandboxCount').textContent = `${divisors.length} 個`;
+                document.getElementById('sandboxPrimeFactors').textContent = primeFactors.join(' × ');
+            }
+        }
+
+        const soundManager = new SoundManager();
+        const particles = new ParticleEngine();
+        const game = new FactorBreakGame();
+        const sandbox = new SandboxManager();
+
+        window.soundManager = soundManager;
+        window.particles = particles;
+        window.game = game;
+        window.sandbox = sandbox;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            soundManager.init();
+        });
+    </script>
+</body>
+</html>
